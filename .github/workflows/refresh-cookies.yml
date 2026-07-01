@@ -1,0 +1,135 @@
+name: '🍪 Auto-Refresh All Cookies'
+
+on:
+  schedule:
+    - cron: '23 14 * * *'
+  workflow_dispatch: # برای تست دستی
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛠️ Setup yt-dlp
+        uses: AnimMouse/setup-yt-dlp@v3
+        
+      - name: 🍪 Setup Cookies
+        uses: AnimMouse/setup-yt-dlp/cookies@v3
+        with:
+          cookies: ${{ secrets.YOUTUBE_COOKIES }}
+          
+      - name: 🎲 Trigger Random Cookie Refresh Action
+        run: |
+          # ۱. توقف اولیه برای دور زدن تشخیص زمان‌بندی ثابت بات‌ها (۱ تا ۳ دقیقه)
+          DELAY=$((RANDOM % 120 + 60))
+          echo "Sleeping for $DELAY seconds to mimic human randomness..."
+          sleep $DELAY
+
+          # بیس دستور: شبیه‌سازی مرورگر واقعی بدون دانلود فایل
+          BASE_CMD="yt-dlp --simulate --ignore-errors --no-check-certificate --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'"
+
+          # ----------------------------------------------------
+          # ۲. رفرش یوتیوب (شبیه‌سازی کامل کاربر)
+          # ----------------------------------------------------
+          echo "🔄 Refreshing YouTube Cookies..."
+          YT_ACTIONS=(
+            # سرچ‌های عمومی و روزمره
+            "$BASE_CMD 'ytsearch1:latest tech news'"
+            "$BASE_CMD 'ytsearch1:popular pop music 2026'"
+            "$BASE_CMD 'ytsearch1:funny cats shorts'"
+            "$BASE_CMD 'ytsearch1:programming python tutorial'"
+            "$BASE_CMD 'ytsearch1:easy dinner recipes 10 minutes'"
+            "$BASE_CMD 'ytsearch1:champions league highlights'"
+            "$BASE_CMD 'ytsearch1:travel vlog japan'"
+            "$BASE_CMD 'ytsearch1:home workout routine without equipment'"
+            "$BASE_CMD 'ytsearch1:movie trailers'"
+            
+            # صفحات اصلی و ترندها
+            "$BASE_CMD --playlist-items 1 'https://www.youtube.com/feed/trending'"
+            "$BASE_CMD --playlist-items 1 'https://www.youtube.com/gaming'"
+            "$BASE_CMD --playlist-items 1 'https://www.youtube.com/music'"
+            
+            # سرچ ویدیوهای لایو
+            "$BASE_CMD 'ytsearch1:lofi hip hop radio live'"
+            "$BASE_CMD 'ytsearch1:live news 24/7'"
+            "$BASE_CMD 'ytsearch1:relaxing nature sounds live'"
+            
+            # ویدیوهای خاص و ثابت (به عنوان طعمه)
+            "$BASE_CMD 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'" # Rickroll
+            "$BASE_CMD 'https://www.youtube.com/watch?v=jNQXAC9IVRw'" # First YouTube video
+            "$BASE_CMD 'https://www.youtube.com/watch?v=9bZkp7q19f0'" # Gangnam Style
+          )
+          eval "${YT_ACTIONS[$RANDOM % ${#YT_ACTIONS[@]}]}" || true
+          sleep $((RANDOM % 15 + 5))
+
+          # ----------------------------------------------------
+          # ۳. رفرش PornHub
+          # ----------------------------------------------------
+          echo "🔄 Refreshing PornHub Cookies..."
+          PH_ACTIONS=(
+            "$BASE_CMD --playlist-items 1 'https://www.pornhub.com/video'"
+            "$BASE_CMD --playlist-items 1 'https://www.pornhub.com/video?o=ht'"
+            "$BASE_CMD --playlist-items 1 'https://www.pornhub.com/video?o=mv'"
+            "$BASE_CMD --playlist-items 1 'https://www.pornhub.com/recommended'"
+            "$BASE_CMD --playlist-items 1 'https://www.pornhub.com/categories'"
+          )
+          eval "${PH_ACTIONS[$RANDOM % ${#PH_ACTIONS[@]}]}" || true
+          sleep $((RANDOM % 15 + 5))
+
+          # ----------------------------------------------------
+          # ۴. رفرش XVideos
+          # ----------------------------------------------------
+          echo "🔄 Refreshing XVideos Cookies..."
+          XV_ACTIONS=(
+            "$BASE_CMD --playlist-items 1 'https://www.xvideos.com/'"
+            "$BASE_CMD --playlist-items 1 'https://www.xvideos.com/hits'"
+            "$BASE_CMD --playlist-items 1 'https://www.xvideos.com/new'"
+            "$BASE_CMD --playlist-items 1 'https://www.xvideos.com/best'"
+          )
+          eval "${XV_ACTIONS[$RANDOM % ${#XV_ACTIONS[@]}]}" || true
+          sleep $((RANDOM % 15 + 5))
+
+          # ----------------------------------------------------
+          # ۵. رفرش XHamster
+          # ----------------------------------------------------
+          echo "🔄 Refreshing XHamster Cookies..."
+          XH_ACTIONS=(
+            "$BASE_CMD --playlist-items 1 'https://xhamster.com/'"
+            "$BASE_CMD --playlist-items 1 'https://xhamster.com/new'"
+            "$BASE_CMD --playlist-items 1 'https://xhamster.com/best'"
+            "$BASE_CMD --playlist-items 1 'https://xhamster.com/channels'"
+          )
+          eval "${XH_ACTIONS[$RANDOM % ${#XH_ACTIONS[@]}]}" || true
+          sleep $((RANDOM % 15 + 5))
+
+          # ----------------------------------------------------
+          # ۶. رفرش YouPorn
+          # ----------------------------------------------------
+          echo "🔄 Refreshing YouPorn Cookies..."
+          YP_ACTIONS=(
+            "$BASE_CMD --playlist-items 1 'https://www.youporn.com/'"
+            "$BASE_CMD --playlist-items 1 'https://www.youporn.com/most_viewed/'"
+            "$BASE_CMD --playlist-items 1 'https://www.youporn.com/top_rated/'"
+            "$BASE_CMD --playlist-items 1 'https://www.youporn.com/recommended/'"
+          )
+          eval "${YP_ACTIONS[$RANDOM % ${#YP_ACTIONS[@]}]}" || true
+          sleep $((RANDOM % 15 + 5))
+
+          # ----------------------------------------------------
+          # ۷. رفرش RedTube
+          # ----------------------------------------------------
+          echo "🔄 Refreshing RedTube Cookies..."
+          RT_ACTIONS=(
+            "$BASE_CMD --playlist-items 1 'https://www.redtube.com/'"
+            "$BASE_CMD --playlist-items 1 'https://www.redtube.com/latest'"
+            "$BASE_CMD --playlist-items 1 'https://www.redtube.com/top'"
+            "$BASE_CMD --playlist-items 1 'https://www.redtube.com/recommended'"
+          )
+          eval "${RT_ACTIONS[$RANDOM % ${#RT_ACTIONS[@]}]}" || true
+          
+          echo "✅ All cookie refreshes executed."
+
+      - name: 💾 Save Updated Cookies to Secrets
+        uses: AnimMouse/setup-yt-dlp/cookies/update@v3
+        with:
+          cookies_secret_name: YOUTUBE_COOKIES
+          token: ${{ secrets.GH_PAT }}

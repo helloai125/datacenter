@@ -1,0 +1,130 @@
+name: '📥 Mirror File & Generate Repo ZIP'
+
+on:
+  workflow_dispatch:
+    inputs:
+      file_url:
+        description: 'Comma Separated Direct Links or YouTube URLs'
+        required: true
+        type: string
+      chat_id:
+        description: 'Telegram Chat ID (Optional)'
+        required: false
+        type: string
+      message_id:
+        description: 'Telegram Message ID (Optional)'
+        required: false
+        type: string
+      webhook_url:
+        description: 'Webhook URL to notify (Optional)'
+        required: false
+        type: string
+      force_ytdlp:
+        description: 'Force download using yt-dlp'
+        required: false
+        default: 'false'
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  mirror-and-zip:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔄 Checkout repo
+        uses: actions/checkout@v4
+
+      - name: 🛠️ Setup yt-dlp
+        uses: AnimMouse/setup-yt-dlp@v3
+
+      - name: 🍪 Setup Cookies
+        uses: AnimMouse/setup-yt-dlp/cookies@v3
+        with:
+          cookies: ${{ secrets.YOUTUBE_COOKIES }}
+
+      - name: ⚙️ Install aria2
+        run: sudo apt-get update && sudo apt-get install -y aria2
+
+      - name: ⬇️ Download file(s)
+        id: download
+        run: |
+          URLS="${{ github.event.inputs.file_url }}"
+          FORCE_YTDLP="${{ github.event.inputs.force_ytdlp }}"
+          rm -rf files && mkdir -p files
+          IFS=',' read -ra ADDR <<< "$URLS"
+          for URL in "${ADDR[@]}"; do
+            URL=$(echo "$URL" | xargs)
+            if [ -z "$URL" ]; then continue; fi
+            
+            if [ "$FORCE_YTDLP" == "true" ]; then
+              REFERER=""
+              # استخراج دامین برای رفرر به صورت خودکار (به جز یوتیوب)
+              if [[ "$URL" != *"youtube.com"* ]] && [[ "$URL" != *"youtu.be"* ]]; then
+                REFERER=$(echo "$URL" | awk -F/ '{print $1"//"$3"/"}')
+              fi
+              
+              yt-dlp -f "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080]/best" \
+                --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+                ${REFERER:+--referer "$REFERER"} \
+                --no-check-certificate \
+                --geo-bypass \
+                --sleep-requests 3 \
+                --remux-video mp4 \
+                --merge-output-format mp4 \
+                --restrict-filenames \
+                -o "files/%(playlist_index)s_%(title).50s.%(ext)s" "$URL"
+            else
+              aria2c --split=8 --max-connection-per-server=8 --min-split-size=1M --dir="files" "$URL"
+            fi
+          done
+
+          FILE_COUNT=$(ls -1 files/ | wc -l)
+          if [ "$FILE_COUNT" -gt 1 ]; then 
+            echo "filename=$FILE_COUNT files" >> "$GITHUB_OUTPUT"
+          else 
+            echo "filename=$(basename "$(ls files/* | head -n 1)")" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: ✂️ Split Large Files (95MB)
+        run: |
+          cd files
+          for f in *; do
+            if [ -f "$f" ] && [ $(stat -c%s "$f") -gt 99614720 ]; then
+              zip -s 95m "${f%.*}_split.zip" "$f" && rm "$f"
+            fi
+          done
+
+      - name: 📝 Update README
+        run: |
+          LINK="https://github.com/${{ github.repository }}/archive/refs/heads/main.zip"
+          echo -e "# datacenter\n\n| Download Link | Last Update |\n| --- | --- |\n| [Download ZIP]($LINK) | $(date +'%Y-%m-%d %H:%M') |" > README.md
+
+      - name: 📝 Commit & Force Push (Clear History)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # ساخت شاخه یتیم و جایگزینی کامل با main
+          git checkout --orphan latest-branch
+          git add -A files/ README.md
+          git commit -m "chore: mirrored ${{ steps.download.outputs.filename }} [skip ci]"
+          git branch -D main || true
+          git branch -m main
+          git push origin main --force
+
+      - name: 🔄 Refresh Cookies
+        if: always()
+        uses: AnimMouse/setup-yt-dlp/cookies/update@v3
+        with:
+          cookies_secret_name: YOUTUBE_COOKIES
+          token: ${{ secrets.GH_PAT }}
+
+      - name: 🔔 Webhook Notification
+        if: always() && github.event.inputs.webhook_url != ''
+        run: |
+          STATUS="success"
+          if [ "${{ job.status }}" != "success" ]; then STATUS="failed"; fi
+          LINK="https://github.com/${{ github.repository }}/archive/refs/heads/main.zip"
+          curl -X POST "${{ github.event.inputs.webhook_url }}" -H "Content-Type: application/json" \
+            -d "{\"chat_id\": ${{ github.event.inputs.chat_id }}, \"message_id\": ${{ github.event.inputs.message_id }}, \"status\": \"$STATUS\", \"download_link\": \"$LINK\"}"
